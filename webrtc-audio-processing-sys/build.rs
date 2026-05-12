@@ -461,6 +461,27 @@ fn main() -> Result<()> {
         ] {
             builder = builder.clang_arg(*flag);
         }
+
+        // VS-bundled libclang in parse mode rejects its own resource headers
+        // (mmintrin.h '__builtin_ia32_*' not registered as builtins). Force
+        // a working clang resource dir if LIBCLANG_PATH points at a stand-
+        // alone LLVM install: <LIBCLANG_PATH>/../lib/clang/<MAJOR>. Passing
+        // via .clang_arg() avoids the shell-tokenization issues that bite
+        // BINDGEN_EXTRA_CLANG_ARGS when the path contains spaces (which
+        // C:\Program Files\... always does on Windows).
+        if let Ok(libclang_path) = env::var("LIBCLANG_PATH") {
+            let clang_root = PathBuf::from(&libclang_path).join("..").join("lib").join("clang");
+            if let Ok(entries) = std::fs::read_dir(&clang_root) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() && path.join("include").is_dir() {
+                        let canon = path.canonicalize().unwrap_or(path);
+                        builder = builder.clang_arg(format!("-resource-dir={}", canon.display()));
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     builder = builder
