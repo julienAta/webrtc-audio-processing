@@ -274,6 +274,18 @@ mod webrtc {
         lib_dirs: &[PathBuf],
         prefix: &str,
     ) -> Result<Vec<String>> {
+        // On Windows MSVC, cc-rs emits `name.lib` (no `lib` prefix, `.lib`
+        // extension) while meson still produces `libname.a` for the main
+        // archive. The wrapper-side prefix step below looks for `.a` and
+        // silently skips when it can't find the cc-rs-produced `.lib`, so
+        // wrapper.o retains unprefixed `webrtc::*` references while the
+        // main archive only has prefixed symbols, producing LNK2019.
+        // Skip prefixing entirely on MSVC: a single consumer can only link
+        // one copy of the lib, so there's no multi-version risk to mitigate.
+        if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+            return Ok(vec![]);
+        }
+
         let static_lib_filename = format!("lib{LIB_NAME}.a");
 
         for lib_dir in lib_dirs {
