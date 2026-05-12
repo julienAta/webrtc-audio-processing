@@ -400,8 +400,12 @@ fn main() -> Result<()> {
         .cpp(true)
         .file("src/wrapper.cpp")
         .includes(&include_dirs)
-        .flag("-std=c++17")
-        .flag("-Wno-unused-parameter")
+        // MSVC rejects gcc-style flags; flag_if_supported probes each and only
+        // keeps the one cl.exe / gcc accepts. Pair the two -std forms so we
+        // request C++17 on both toolchains. Warning suppression is best-effort.
+        .flag_if_supported("-std=c++17")
+        .flag_if_supported("/std:c++17")
+        .flag_if_supported("-Wno-unused-parameter")
         .out_dir(out_dir())
         .compile("webrtc_audio_processing_wrapper");
 
