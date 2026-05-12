@@ -486,7 +486,8 @@ fn determine_objcopy_path() -> Result<PathBuf> {
     // We use HOST because that is where the compiler (and tools) are running.
     let host = env::var("HOST").context("HOST env var not found")?;
 
-    let objcopy = sysroot.join("lib").join("rustlib").join(host).join("bin").join("rust-objcopy");
+    let objcopy_name = format!("rust-objcopy{}", std::env::consts::EXE_SUFFIX);
+    let objcopy = sysroot.join("lib").join("rustlib").join(host).join("bin").join(objcopy_name);
 
     // Optional: verification
     if !objcopy.exists() {
