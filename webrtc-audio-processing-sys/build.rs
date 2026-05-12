@@ -198,6 +198,12 @@ mod webrtc {
         );
 
         // Copy the sources to under out directory so that we can patch it without consequences.
+        // Pre-clean the dest: when this crate is consumed via `[patch.crates-io]` git URL,
+        // cargo's checkout includes the submodule's `.git/objects/pack/*.{idx,pack}` files
+        // at mode 0444, which `cp -a` then can't overwrite on subsequent invocations.
+        if webrtc_source_dir.exists() {
+            std::fs::remove_dir_all(&webrtc_source_dir).context("clearing webrtc source dir")?;
+        }
         let mut cp = Command::new("cp");
         // Copy recursively, preserve attributes. Use trailing dot trick to prevent creating
         // `webrtc-audio-processing/webrtc-audio-processing` nesting on a 2nd invocation.
