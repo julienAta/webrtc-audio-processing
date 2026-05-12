@@ -441,6 +441,28 @@ fn main() -> Result<()> {
         .generate_comments(true)
         .enable_cxx_namespaces();
 
+    // On MSVC, libclang transitively pulls in MSVC's STL which includes
+    // <mmintrin.h>. Modern Clang only declares the `__builtin_ia32_*` MMX
+    // intrinsics when the `mmx` target feature is active; without it, the
+    // header fails to parse with "use of undeclared identifier". Enable the
+    // common x86-64 SIMD features so libclang accepts the intrinsic headers.
+    // Also turn on MS compatibility so the parse follows MSVC semantics.
+    if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+        for flag in &[
+            "-fms-compatibility",
+            "-fms-extensions",
+            "-mmmx",
+            "-msse",
+            "-msse2",
+            "-msse3",
+            "-mssse3",
+            "-msse4.1",
+            "-msse4.2",
+        ] {
+            builder = builder.clang_arg(*flag);
+        }
+    }
+
     builder = builder
         // Transitive dependencies are automatically included.
         .allowlist_function("webrtc_audio_processing_wrapper::.*")
